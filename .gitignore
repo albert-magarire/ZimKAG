@@ -1,0 +1,46 @@
+# ─── Python ──────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+
+# ─── Environment / secrets ───────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Trained models (too large for git, see README for download) ─────────
+zimkag_webapp/models/*
+!zimkag_webapp/models/.gitkeep
+
+# ─── Generated reports ───────────────────────────────────────────────────
+zimkag_webapp/reports_cache/
+zimkag_webapp/server.log
+*.log
+
+# ─── Old / superseded data ───────────────────────────────────────────────
+sorted_dataset.csv
+
+# ─── Notebooks ───────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+
+# ─── IDE / OS ────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Claude Code session files ───────────────────────────────────────────
+.claude/
+
+# ─── Misc ────────────────────────────────────────────────────────────────
+*.tmp
+*.bak
+nohup.out

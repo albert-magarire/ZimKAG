@@ -1,0 +1,220 @@
+/* ZimKAG custom styles. Pure CSS — Tailwind CDN does not process @apply. */
+
+:root {
+  --zk-navy: #1a5f7a;
+  --zk-gold: #ffc107;
+  --zk-cream: #f9f3e6;
+  --zk-ink: #0f172a;
+  --risk-high: #dc2626;
+  --risk-med:  #ea580c;
+  --risk-low:  #ca8a04;
+  --risk-opp:  #16a34a;
+  --risk-neu:  #6b7280;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────── */
+.tab-btn {
+  padding: .5rem 1rem;
+  border-radius: .5rem;
+  font-size: .875rem;
+  font-weight: 600;
+  color: #475569;
+  transition: background-color .15s, color .15s;
+}
+.tab-btn:hover { background: #f1f5f9; }
+.dark .tab-btn { color: #cbd5e1; }
+.dark .tab-btn:hover { background: rgba(51,65,85,.6); }
+
+.tab-active { background: var(--zk-navy); color: #fff !important; }
+.tab-active:hover { background: var(--zk-navy); }
+.dark .tab-active { background: var(--zk-gold); color: var(--zk-ink) !important; }
+.dark .tab-active:hover { background: var(--zk-gold); }
+
+/* ── Filter pills ────────────────────────────────────────────────────── */
+.filter-pill {
+  padding: .375rem .75rem;
+  border-radius: 9999px;
+  font-size: .75rem;
+  font-weight: 600;
+  color: #475569;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+  transition: box-shadow .15s, background-color .15s, color .15s;
+}
+.filter-pill:hover { box-shadow: inset 0 0 0 1px var(--zk-navy); }
+.dark .filter-pill { color: #cbd5e1; box-shadow: inset 0 0 0 1px #475569; }
+.dark .filter-pill:hover { box-shadow: inset 0 0 0 1px var(--zk-gold); }
+
+.filter-active {
+  background: var(--zk-navy);
+  color: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--zk-navy);
+}
+.dark .filter-active {
+  background: var(--zk-gold);
+  color: var(--zk-ink) !important;
+  box-shadow: inset 0 0 0 1px var(--zk-gold);
+}
+
+/* ── Drag-over highlight ─────────────────────────────────────────────── */
+#drop-zone.drag-over {
+  border-color: var(--zk-navy);
+  background: rgba(249,243,230,.8);
+}
+.dark #drop-zone.drag-over { background: rgba(51,65,85,.4); }
+
+/* ── Sample-clause buttons ───────────────────────────────────────────── */
+.sample-clause {
+  font-size: .75rem;
+  padding: .375rem .75rem;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #334155;
+  transition: background-color .15s, color .15s;
+}
+.sample-clause:hover { background: var(--zk-navy); color: #fff; }
+.dark .sample-clause { background: #334155; color: #e2e8f0; }
+.dark .sample-clause:hover { background: var(--zk-gold); color: var(--zk-ink); }
+
+/* ── Clause card ─────────────────────────────────────────────────────── */
+.clause-card {
+  border-radius: .75rem;
+  background: rgba(255,255,255,.7);
+  box-shadow: inset 0 0 0 1px #e2e8f0;
+  overflow: hidden;
+  transition: box-shadow .2s;
+  animation: fadeUp .25s ease-out both;
+}
+.clause-card:hover { box-shadow: 0 10px 30px -12px rgba(0,0,0,.15), inset 0 0 0 1px #cbd5e1; }
+.dark .clause-card {
+  background: rgba(15,23,42,.4);
+  box-shadow: inset 0 0 0 1px #334155;
+}
+.dark .clause-card:hover {
+  box-shadow: 0 10px 30px -12px rgba(0,0,0,.4), inset 0 0 0 1px #475569;
+}
+.clause-card.collapsed .card-body { display: none; }
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .75rem 1rem;
+  cursor: pointer;
+  gap: 1rem;
+  background: rgba(248,250,252,.5);
+}
+.dark .card-header { background: rgba(30,41,59,.4); }
+.card-body { padding: 1rem; }
+
+.risk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  padding: .25rem .625rem;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: #fff;
+  white-space: nowrap;
+}
+.risk-pill.high        { background: var(--risk-high); }
+.risk-pill.medium      { background: var(--risk-med); }
+.risk-pill.low         { background: var(--risk-low); }
+.risk-pill.opportunity { background: var(--risk-opp); }
+.risk-pill.neutral     { background: var(--risk-neu); }
+
+.confidence-bar {
+  height: 4px;
+  margin-top: .5rem;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: #e2e8f0;
+}
+.dark .confidence-bar { background: #334155; }
+.confidence-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 9999px;
+  transition: width .35s;
+}
+
+/* ── Section labels inside a card ────────────────────────────────────── */
+.section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--zk-navy);
+  margin-bottom: .25rem;
+}
+.dark .section-label { color: var(--zk-gold); }
+
+.clause-text {
+  font-size: .875rem;
+  line-height: 1.6;
+  color: #334155;
+}
+.dark .clause-text { color: #e2e8f0; }
+
+.rewrite-text {
+  font-size: .875rem;
+  line-height: 1.6;
+  color: #065f46;
+  background: #ecfdf5;
+  border-radius: .5rem;
+  padding: .75rem;
+  box-shadow: inset 0 0 0 1px #a7f3d0;
+}
+.dark .rewrite-text {
+  color: #6ee7b7;
+  background: rgba(16,185,129,.1);
+  box-shadow: inset 0 0 0 1px rgba(16,185,129,.4);
+}
+
+.kg-text {
+  font-size: .8125rem;
+  line-height: 1.55;
+  color: #475569;
+  font-style: italic;
+}
+.dark .kg-text { color: #94a3b8; }
+
+.meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .5rem;
+  font-size: 11px;
+  color: #64748b;
+}
+.meta-chip {
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.dark .meta-chip { background: #1e293b; color: #cbd5e1; }
+
+/* Scrollbar */
+#cards-container::-webkit-scrollbar { width: 8px; }
+#cards-container::-webkit-scrollbar-track { background: transparent; }
+#cards-container::-webkit-scrollbar-thumb { background: rgba(26,95,122,.25); border-radius: 999px; }
+#cards-container::-webkit-scrollbar-thumb:hover { background: rgba(26,95,122,.5); }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+textarea { resize: vertical; min-height: 160px; }
+
+.section-divider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: .75rem 0;
+}
+.dark .section-divider { background: #334155; }

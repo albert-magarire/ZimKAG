@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZimKAG · Contract Risk Analyser</title>
+  <meta name="description" content="Supervised NLP for risk and opportunity detection in bespoke construction contracts (MSc Quantity Surveying, University of Zimbabwe)." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a5f7a'/%3E%3Ctext x='32' y='44' font-size='34' font-family='system-ui' font-weight='800' text-anchor='middle' fill='%23ffc107'%3EZ%3C/text%3E%3C/svg%3E" />
+
+  <!-- Tailwind CDN (dev/MSc demo OK) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zk: {
+              navy:  '#1a5f7a',
+              gold:  '#ffc107',
+              cream: '#f9f3e6',
+              ink:   '#0f172a',
+            },
+            risk: {
+              high:  '#dc2626',
+              med:   '#ea580c',
+              low:   '#ca8a04',
+              opp:   '#16a34a',
+              neu:   '#6b7280',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          boxShadow: {
+            soft: '0 10px 30px -12px rgba(0,0,0,.15)',
+          },
+          keyframes: {
+            'fade-up': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+            'pulse-ring': { '0%': { boxShadow: '0 0 0 0 rgba(26,95,122,.45)' }, '100%': { boxShadow: '0 0 0 14px rgba(26,95,122,0)' } },
+          },
+          animation: {
+            'fade-up': 'fade-up .35s ease-out',
+            'pulse-ring': 'pulse-ring 1.6s ease-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js for the risk-distribution donut -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body class="font-sans bg-zk-cream text-zk-ink antialiased dark:bg-slate-900 dark:text-slate-100 transition-colors">
+
+  <!-- ─── Top nav ─────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-700/60">
+    <div class="max-w-7xl mx-auto flex items-center justify-between px-5 py-3">
+      <a href="#" class="flex items-center gap-3 group">
+        <span class="w-9 h-9 grid place-items-center rounded-xl bg-zk-navy text-zk-gold font-display font-extrabold text-lg shadow-soft group-hover:rotate-3 transition-transform">Z</span>
+        <div class="leading-tight">
+          <p class="font-display font-extrabold text-zk-navy dark:text-zk-gold text-lg">ZimKAG</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">Contract Risk &amp; Opportunity Analyser</p>
+        </div>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium">
+        <a href="#analyse" class="hover:text-zk-navy dark:hover:text-zk-gold">Analyse</a>
+        <a href="#how" class="hover:text-zk-navy dark:hover:text-zk-gold">How it works</a>
+        <a href="#about" class="hover:text-zk-navy dark:hover:text-zk-gold">About</a>
+        <span id="status-pill" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">checking…</span>
+      </nav>
+      <button id="dark-toggle" class="ml-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" title="Toggle dark mode">
+        <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36l-1.42 1.42M6.05 17.95l-1.41 1.41m0-13.72l1.41 1.41M17.95 17.95l1.41 1.41M12 7a5 5 0 100 10 5 5 0 000-10z"/></svg>
+        <svg id="icon-moon" class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Hero ────────────────────────────────────────────────────────── -->
+  <section class="relative overflow-hidden">
+    <div class="absolute inset-0 -z-10 opacity-60">
+      <div class="absolute top-0 -left-32 w-96 h-96 bg-zk-gold/30 rounded-full blur-3xl"></div>
+      <div class="absolute -bottom-20 right-0 w-[28rem] h-[28rem] bg-zk-navy/20 rounded-full blur-3xl"></div>
+    </div>
+    <div class="max-w-7xl mx-auto px-5 pt-14 pb-10 text-center">
+      <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zk-navy dark:text-zk-gold bg-white/70 dark:bg-slate-800/70 px-3 py-1.5 rounded-full ring-1 ring-zk-navy/10 dark:ring-zk-gold/10">
+        <span class="w-1.5 h-1.5 rounded-full bg-zk-gold"></span> MSc Project · University of Zimbabwe
+      </span>
+      <h1 class="font-display font-extrabold text-4xl md:text-5xl lg:text-6xl mt-5 leading-tight">
+        Spot the <span class="text-risk-high">risks</span>,<br class="hidden sm:block"/>
+        seize the <span class="text-risk-opp">opportunities</span>.
+      </h1>
+      <p class="max-w-2xl mx-auto mt-5 text-slate-600 dark:text-slate-300 text-lg">
+        Upload a JCT, NEC4, FIDIC or bespoke construction contract and let our supervised Legal-BERT model — backed by a Zimbabwe-aware knowledge graph — surface every red flag, neutral clause and contractor-favourable opportunity in seconds.
+      </p>
+      <div class="mt-7 flex items-center justify-center gap-3">
+        <a href="#analyse" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-zk-navy text-white font-semibold shadow-soft hover:translate-y-[-1px] hover:shadow-lg transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5-5m0 0l5 5m-5-5v12"/></svg>
+          Analyse a contract
+        </a>
+        <a href="#how" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/80 dark:bg-slate-800 text-zk-navy dark:text-zk-gold font-semibold ring-1 ring-zk-navy/10 dark:ring-zk-gold/10 hover:bg-white dark:hover:bg-slate-700 transition">
+          How it works
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Analyser ────────────────────────────────────────────────────── -->
+  <section id="analyse" class="max-w-7xl mx-auto px-5 pb-20">
+    <div class="grid lg:grid-cols-12 gap-6">
+
+      <!-- Input panel -->
+      <div class="lg:col-span-5 bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60 animate-fade-up">
+
+        <div class="flex items-center gap-2 mb-4">
+          <button id="tab-upload" class="tab-btn tab-active">📄 Upload</button>
+          <button id="tab-paste"  class="tab-btn">✍️ Paste text</button>
+        </div>
+
+        <!-- Upload pane -->
+        <div id="pane-upload">
+          <label id="drop-zone" for="file-input"
+                 class="block border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center cursor-pointer hover:border-zk-navy hover:bg-zk-cream/50 dark:hover:bg-slate-700/30 transition">
+            <input id="file-input" type="file" class="hidden" accept=".pdf,.docx,.txt" />
+            <svg class="w-12 h-12 mx-auto text-zk-navy dark:text-zk-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.9 5 5 0 019.71-1.42A5.5 5.5 0 0117.5 17H7zm5-7v8m0-8l-3 3m3-3l3 3"/></svg>
+            <p class="mt-3 font-semibold text-slate-700 dark:text-slate-200">Drop your contract here</p>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">PDF, DOCX or TXT · up to 25 MB</p>
+            <p id="file-name" class="hidden mt-3 text-sm font-mono text-zk-navy dark:text-zk-gold"></p>
+          </label>
+        </div>
+
+        <!-- Paste pane -->
+        <div id="pane-paste" class="hidden">
+          <textarea id="text-input" rows="9" placeholder="Paste contract clauses or full contract text here…"
+            class="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-zk-navy"></textarea>
+        </div>
+
+        <!-- Options -->
+        <div class="mt-4 flex items-center justify-between text-sm">
+          <label class="inline-flex items-center gap-2 cursor-pointer select-none">
+            <input id="opt-llm" type="checkbox" checked class="rounded border-slate-300 text-zk-navy focus:ring-zk-navy" />
+            <span>Use LLM for clause rewrites</span>
+          </label>
+          <span class="text-xs text-slate-500 dark:text-slate-400">Groq · Llama 3.3 70B</span>
+        </div>
+
+        <button id="analyse-btn"
+                class="mt-5 w-full py-3.5 rounded-xl bg-gradient-to-r from-zk-navy to-zk-gold text-white font-bold shadow-soft hover:shadow-lg hover:translate-y-[-1px] transition disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed">
+          🔍 Analyse contract
+        </button>
+
+        <!-- Quick-paste samples -->
+        <details class="mt-5 text-sm">
+          <summary class="cursor-pointer text-zk-navy dark:text-zk-gold font-medium">Try a sample clause</summary>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button class="sample-clause" data-clause="The Contractor shall pay liquidated and ascertained damages at the rate of USD 5,000 per week without limit as to time or amount.">High risk LADs</button>
+            <button class="sample-clause" data-clause="Where the Engineer fails to certify on time, the Contractor's quotation is treated as accepted.">Opportunity</button>
+            <button class="sample-clause" data-clause="All payments shall be made in United States Dollars; payment in RTGS shall not discharge the Contractor's obligation.">Currency risk</button>
+            <button class="sample-clause" data-clause="SECTION 4 – PAYMENT">Heading</button>
+          </div>
+        </details>
+      </div>
+
+      <!-- Results panel -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Empty state -->
+        <div id="empty-state" class="bg-white/60 dark:bg-slate-800/60 rounded-2xl p-12 text-center ring-1 ring-slate-200/60 dark:ring-slate-700/60">
+          <div class="text-5xl">📑</div>
+          <h3 class="font-display font-bold text-xl mt-3">Ready when you are</h3>
+          <p class="text-slate-500 dark:text-slate-400 mt-2">Upload a contract or paste text to see the clause-by-clause risk breakdown.</p>
+        </div>
+
+        <!-- Progress -->
+        <div id="progress-panel" class="hidden bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60">
+          <div class="flex items-center gap-4">
+            <div class="relative w-12 h-12">
+              <div class="absolute inset-0 rounded-full bg-zk-navy/10 animate-pulse-ring"></div>
+              <div class="absolute inset-2 rounded-full bg-zk-navy"></div>
+            </div>
+            <div class="flex-1">
+              <p class="font-semibold">Analysing <span id="progress-filename"></span></p>
+              <p class="text-sm text-slate-500 dark:text-slate-400"><span id="progress-text">Starting…</span></p>
+            </div>
+            <p class="font-mono text-zk-navy dark:text-zk-gold font-bold text-lg"><span id="progress-pct">0</span>%</p>
+          </div>
+          <div class="mt-4 w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-zk-navy to-zk-gold transition-all duration-300" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div id="summary-panel" class="hidden grid sm:grid-cols-2 gap-6 animate-fade-up">
+          <div class="bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60">
+            <h3 class="font-display font-bold text-zk-navy dark:text-zk-gold">Summary</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1" id="summary-filename"></p>
+            <div class="mt-5 grid grid-cols-2 gap-3 text-center">
+              <div class="rounded-xl bg-risk-high/10 ring-1 ring-risk-high/30 py-3"><p class="font-display font-extrabold text-2xl text-risk-high" id="count-high">0</p><p class="text-xs uppercase tracking-wider text-risk-high">High</p></div>
+              <div class="rounded-xl bg-risk-med/10 ring-1 ring-risk-med/30 py-3"><p class="font-display font-extrabold text-2xl text-risk-med" id="count-medium">0</p><p class="text-xs uppercase tracking-wider text-risk-med">Medium</p></div>
+              <div class="rounded-xl bg-risk-low/10 ring-1 ring-risk-low/30 py-3"><p class="font-display font-extrabold text-2xl text-risk-low" id="count-low">0</p><p class="text-xs uppercase tracking-wider text-risk-low">Low</p></div>
+              <div class="rounded-xl bg-risk-opp/10 ring-1 ring-risk-opp/30 py-3"><p class="font-display font-extrabold text-2xl text-risk-opp" id="count-opportunity">0</p><p class="text-xs uppercase tracking-wider text-risk-opp">Opportunity</p></div>
+            </div>
+            <div class="mt-3 rounded-xl bg-risk-neu/10 ring-1 ring-risk-neu/30 py-2 px-3 flex items-center justify-between">
+              <span class="text-xs uppercase tracking-wider text-risk-neu">Neutral / boilerplate</span>
+              <span class="font-display font-bold text-risk-neu" id="count-neutral">0</span>
+            </div>
+            <a id="download-pdf" href="#" class="mt-5 inline-flex items-center justify-center w-full gap-2 py-3 rounded-xl bg-zk-gold text-zk-ink font-semibold hover:brightness-95 transition">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M5 20h14a2 2 0 002-2V8.5L13.5 2H6a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              Download PDF report
+            </a>
+          </div>
+
+          <div class="bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60">
+            <h3 class="font-display font-bold text-zk-navy dark:text-zk-gold">Risk distribution</h3>
+            <div class="relative w-full h-56 mt-2">
+              <canvas id="risk-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Filters + clause cards -->
+        <div id="results-panel" class="hidden bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60 animate-fade-up">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h3 class="font-display font-bold text-zk-navy dark:text-zk-gold">Clause analysis</h3>
+            <div class="flex flex-wrap gap-2 text-xs">
+              <button class="filter-pill filter-active" data-filter="all">All</button>
+              <button class="filter-pill" data-filter="high">🚨 High</button>
+              <button class="filter-pill" data-filter="medium">🟠 Medium</button>
+              <button class="filter-pill" data-filter="low">🟡 Low</button>
+              <button class="filter-pill" data-filter="opportunity">✅ Opportunity</button>
+              <button class="filter-pill" data-filter="neutral">⚪ Neutral</button>
+            </div>
+          </div>
+          <input id="search-input" type="text" placeholder="Search clauses…"
+            class="w-full mb-4 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 focus:outline-none focus:ring-2 focus:ring-zk-navy text-sm" />
+          <div id="cards-container" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── How it works ────────────────────────────────────────────────── -->
+  <section id="how" class="max-w-7xl mx-auto px-5 py-16 border-t border-slate-200/60 dark:border-slate-700/60">
+    <div class="text-center mb-10">
+      <h2 class="font-display font-extrabold text-3xl">How ZimKAG analyses your contract</h2>
+      <p class="text-slate-500 dark:text-slate-400 mt-2">A three-stage pipeline combining a fine-tuned language model with domain knowledge.</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-6">
+      <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-soft">
+        <div class="w-11 h-11 rounded-xl grid place-items-center bg-zk-navy text-zk-gold font-display font-extrabold text-lg">1</div>
+        <h3 class="font-bold mt-4">Document parsing</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">PDF, DOCX or TXT is parsed and segmented into individual clauses using a heading-aware splitter trained on Zimbabwean construction contracts.</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-soft">
+        <div class="w-11 h-11 rounded-xl grid place-items-center bg-zk-navy text-zk-gold font-display font-extrabold text-lg">2</div>
+        <h3 class="font-bold mt-4">Legal-BERT classification</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">Each clause is classified into <span class="font-semibold">high · medium · low · opportunity · neutral</span> by a Legal-BERT model fine-tuned on a 10 000-clause dataset (JCT, NEC4, FIDIC, bespoke ZW).</p>
+      </div>
+      <div class="bg-white dark:bg-slate-800/80 rounded-2xl p-6 ring-1 ring-slate-200/60 dark:ring-slate-700/60 shadow-soft">
+        <div class="w-11 h-11 rounded-xl grid place-items-center bg-zk-navy text-zk-gold font-display font-extrabold text-lg">3</div>
+        <h3 class="font-bold mt-4">Knowledge-graph guidance</h3>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">A Zimbabwe-aware knowledge graph + semantic retrieval suggests fairer rewrites, escalates risk where appropriate, and flags currency, indemnity and penalty traps.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── About ───────────────────────────────────────────────────────── -->
+  <section id="about" class="max-w-4xl mx-auto px-5 py-16 text-center border-t border-slate-200/60 dark:border-slate-700/60">
+    <h2 class="font-display font-extrabold text-2xl">About this project</h2>
+    <p class="mt-4 text-slate-600 dark:text-slate-300">
+      <span class="font-semibold">Development of a Supervised NLP Model to Assist in Identification of Risks and Opportunities in Bespoke Construction Contracts in Zimbabwe.</span>
+    </p>
+    <p class="mt-3 text-sm text-slate-500 dark:text-slate-400">
+      Robert T. Magarire · Master of Quantity Surveying · Faculty of Engineering &amp; the Built Environment · University of Zimbabwe
+    </p>
+    <p class="mt-1 text-xs text-slate-400">Supervised by W. Gumindoga &amp; T. Chihombori</p>
+  </section>
+
+  <footer class="border-t border-slate-200/60 dark:border-slate-700/60 py-6">
+    <p class="text-center text-xs text-slate-500 dark:text-slate-400">
+      © 2026 ZimKAG · MSc Quantity Surveying · University of Zimbabwe
+    </p>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 hidden z-50 px-4 py-3 rounded-xl bg-slate-900 text-white shadow-lg animate-fade-up"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

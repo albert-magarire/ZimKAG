@@ -1,0 +1,9 @@
+# Trained model goes here.
+# After training in the notebook (cell 5), copy the entire
+#   zimkag_legalbert_5class/
+# folder from Google Drive into this directory so the path is:
+#   models/zimkag_legalbert_5class/
+#     ├── config.json
+#     ├── pytorch_model.bin (or model.safetensors)
+#     ├── tokenizer.json / vocab.txt / etc.
+#     └── label_map.json
