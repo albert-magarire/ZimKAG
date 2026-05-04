@@ -159,47 +159,24 @@ For full deployment / configuration / API documentation see [`zimkag_webapp/READ
 
 ## 🧠 How a clause is analysed
 
+A clause flows through a **hybrid four-stage pipeline**:
+
+```mermaid
+flowchart LR
+    A[/Clause text/]:::input --> B["① Legal-BERT<br/>5-class prediction"]
+    B --> C["② Knowledge-graph<br/>trigger match"]
+    C --> D["③ Semantic-similarity<br/>fallback"]
+    D --> E{"Risk level?"}
+    E -- "high / medium" --> F["④ Groq Llama-3.3-70B<br/>category-specific rewrite"]
+    E -- "low / opp / neutral" --> G["KG suggestion or<br/>canned text"]
+    F --> H[/Result<br/>· risk_level<br/>· KG guidance<br/>· fairer rewrite/]:::output
+    G --> H
+
+    classDef input fill:#dbeafe,stroke:#1d4ed8,color:#000
+    classDef output fill:#d1fae5,stroke:#16a34a,color:#000
 ```
-        ┌────────────────────────┐
-        │  PDF / DOCX / TXT file │
-        └────────────┬───────────┘
-                     │
-                     ▼
-        ┌────────────────────────┐
-        │   pdfplumber / docx    │
-        │   text extraction      │
-        └────────────┬───────────┘
-                     ▼
-        ┌────────────────────────┐
-        │ Heading-aware          │
-        │ clause splitter        │
-        └────────────┬───────────┘
-                     ▼
-   ┌─────────────────┴────────────────────┐
-   │  ① Legal-BERT 5-class prediction     │
-   │     → risk_level + confidence        │
-   └─────────────────┬────────────────────┘
-                     ▼
-   ┌──────────────────────────────────────┐
-   │  ② Knowledge-graph trigger match     │
-   │     (Critical/High → can escalate)   │
-   └─────────────────┬────────────────────┘
-                     ▼
-   ┌──────────────────────────────────────┐
-   │  ③ Semantic-similarity fallback      │
-   │     (sentence-transformers)          │
-   └─────────────────┬────────────────────┘
-                     ▼
-   ┌──────────────────────────────────────┐
-   │  ④ Groq Llama-3.3-70B rewrite        │
-   │     (category-specific prompt)       │
-   └─────────────────┬────────────────────┘
-                     ▼
-        ┌────────────────────────┐
-        │  Aggregated UI report  │
-        │  + downloadable PDF    │
-        └────────────────────────┘
-```
+
+> 📐 **For the full architecture — high-level diagram, sequence diagram, training pipeline, trust boundaries and design decisions — see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).**
 
 ---
 
