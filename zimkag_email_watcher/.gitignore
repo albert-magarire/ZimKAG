@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Environment / secrets
+.env
+
+# OAuth client secrets and access tokens — NEVER commit these
+credentials/client_secret*.json
+credentials/token*.json
+credentials/*.pickle
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

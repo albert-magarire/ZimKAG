@@ -305,7 +305,53 @@ zimkag_legalbert_5class/
 
 ---
 
-## 5 · API surface
+## 5 · Gmail watcher companion service
+
+A separate Python process that polls Gmail and orchestrates calls to the webapp. Lives in [`zimkag_email_watcher/`](../zimkag_email_watcher/). Independent of the webapp — the webapp doesn't even know it exists.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Gmail as Gmail<br/>(REST API)
+    participant Watcher as watcher.py
+    participant Filter as filters.py
+    participant WebApp as ZimKAG webapp<br/>(localhost:18000)
+    participant Inbox as Your inbox
+
+    loop every POLL_INTERVAL_SEC (default 30 s)
+        Watcher->>Gmail: list unread<br/>has:attachment<br/>-label:Processed
+        Gmail-->>Watcher: [msg_id, ...]
+        opt for each msg
+            Watcher->>Gmail: GET message + attachments
+            Gmail-->>Watcher: msg, attachment bytes
+            Watcher->>Filter: extract_text() + count keywords
+            alt distinct_keywords ≥ 3
+                Watcher->>WebApp: POST /api/analyze/file
+                WebApp-->>Watcher: {job_id}
+                loop until done
+                    Watcher->>WebApp: GET /api/jobs/{id}
+                    WebApp-->>Watcher: {progress, status}
+                end
+                Watcher->>WebApp: GET /api/jobs/{id}/report
+                WebApp-->>Watcher: PDF bytes
+                Watcher->>Watcher: build HTML email body
+                Watcher->>Gmail: send_reply<br/>(HTML + PDF attached)
+                Gmail-->>Inbox: 📧 ZimKAG report
+                Watcher->>Gmail: add label ZimKAG/Processed
+            else not a contract
+                Watcher->>Gmail: add label ZimKAG/Skipped
+            end
+        end
+    end
+```
+
+**Why decoupled?** The watcher is a thin orchestrator; all the heavy ML work stays in the webapp. This means a single trained model can serve both the browser UI and the email watcher simultaneously, and the watcher can be scaled / paused / extended (Outlook, Slack…) without touching the analysis core.
+
+**Pre-filter design.** 70+ regex patterns grouped into 8 categories (parties, core concepts, pricing, programme, securities, contract standards, risk language). Synonyms collapse to a single label so `EOT` and `extension of time` don't double-count. A document needs **≥ 3 distinct labels** to trigger analysis — chosen empirically so that invoices and marketing PDFs are reliably skipped while genuine contracts (which always contain dozens of these terms) pass.
+
+---
+
+## 6 · API surface
 
 | Method | Path                          | Body / params                          | Purpose                                                |
 |-------:|-------------------------------|----------------------------------------|--------------------------------------------------------|
@@ -322,7 +368,7 @@ Interactive OpenAPI docs are auto-generated at `/docs` (Swagger UI) and `/redoc`
 
 ---
 
-## 6 · Trust boundaries and security
+## 7 · Trust boundaries and security
 
 ```mermaid
 graph LR
@@ -360,7 +406,7 @@ graph LR
 
 ---
 
-## 7 · Why this architecture?
+## 8 · Why this architecture?
 
 | Decision                                | Alternative                       | Why we chose this                                              |
 |-----------------------------------------|-----------------------------------|----------------------------------------------------------------|

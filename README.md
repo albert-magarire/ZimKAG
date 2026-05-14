@@ -40,6 +40,7 @@ Each risky clause is paired with **knowledge-graph guidance** (Zimbabwe-specific
 - **Fine-tuned Legal-BERT** (`nlpaueb/legal-bert-base-uncased`) for 5-class clause classification
 - **Hybrid pipeline** — Legal-BERT prediction → Knowledge-graph trigger matching → Semantic-similarity fallback → LLM rewrite
 - **Modern web app** — FastAPI backend with async job pipeline, single-page UI (Tailwind CDN + vanilla JS + Chart.js), dark mode, drag-drop, branded PDF report download
+- **📧 Gmail watcher** — companion background service that auto-detects construction contracts in your inbox and replies with a full risk analysis + PDF report (70+ keyword pre-filter, ≥3-hit threshold)
 - **Zimbabwe-aware knowledge graph** with 8 risk categories and fuzzy trigger matching
 - **Graceful degradation** — runs in KG-only mode if the model is missing, with canned suggestions if no LLM key
 
@@ -67,23 +68,36 @@ Each risky clause is paired with **knowledge-graph guidance** (Zimbabwe-specific
 ├── update_notebook.py                    # Historical: first pass at notebook update
 ├── cleanup_notebook.py                   # Rebuilds the notebook into 22 clean cells
 │
-└── zimkag_webapp/                        # Production web application
-    ├── backend/
-    │   ├── app.py                        # FastAPI routes, async job runner
-    │   ├── inference.py                  # Legal-BERT + KG + semantic engine
-    │   ├── extraction.py                 # PDF / DOCX / TXT → clauses
-    │   ├── llm.py                        # Groq client + prompt templates
-    │   ├── reports.py                    # Branded PDF report generator
-    │   └── config.py                     # .env-driven settings
-    ├── frontend/
-    │   ├── index.html                    # Single-page UI (Tailwind CDN)
-    │   ├── style.css
-    │   └── app.js                        # Vanilla JS · Chart.js
-    ├── models/                           # ← drop trained model here (gitignored)
-    ├── .env.example                      # Configuration template
-    ├── requirements.txt                  # Pinned Python dependencies
-    ├── run.bat / run.sh                  # One-command launchers
-    └── README.md                         # Web-app-specific documentation
+├── zimkag_webapp/                        # Production web application
+│   ├── backend/
+│   │   ├── app.py                        # FastAPI routes, async job runner
+│   │   ├── inference.py                  # Legal-BERT + KG + semantic engine
+│   │   ├── extraction.py                 # PDF / DOCX / TXT → clauses
+│   │   ├── llm.py                        # Groq client + prompt templates
+│   │   ├── reports.py                    # Branded PDF report generator
+│   │   └── config.py                     # .env-driven settings
+│   ├── frontend/
+│   │   ├── index.html                    # Single-page UI (Tailwind CDN)
+│   │   ├── style.css
+│   │   └── app.js                        # Vanilla JS · Chart.js
+│   ├── models/                           # ← drop trained model here (gitignored)
+│   ├── .env.example                      # Configuration template
+│   ├── requirements.txt                  # Pinned Python dependencies
+│   ├── run.bat / run.sh                  # One-command launchers
+│   └── README.md                         # Web-app-specific documentation
+│
+└── zimkag_email_watcher/                 # Gmail companion service
+    ├── watcher.py                        # Main polling loop
+    ├── gmail_client.py                   # Gmail OAuth + API wrapper
+    ├── zimkag_client.py                  # HTTP client for the webapp
+    ├── filters.py                        # Keyword detection (70+ terms)
+    ├── email_builder.py                  # HTML reply composer
+    ├── config.py                         # .env-driven settings
+    ├── credentials/                      # OAuth client_secret + token (gitignored)
+    ├── .env.example
+    ├── requirements.txt
+    ├── run_watcher.bat / run_watcher.sh  # One-command launchers
+    └── README.md                         # Setup + OAuth walkthrough
 ```
 
 ---
@@ -154,6 +168,28 @@ run.bat                      # Windows
 ```
 
 For full deployment / configuration / API documentation see [`zimkag_webapp/README.md`](zimkag_webapp/README.md).
+
+### 3 · (Optional) Run the Gmail watcher
+
+Auto-analyse contracts that arrive in your inbox by email:
+
+```bash
+cd ../zimkag_email_watcher
+
+# 1. Set up OAuth (5-minute one-time job — see credentials/README.md)
+#    → drop client_secret.json into credentials/
+
+# 2. Configure
+cp .env.example .env        # edit if needed
+
+# 3. Launch (requires the webapp to be running)
+run_watcher.bat             # Windows
+./run_watcher.sh            # macOS / Linux
+```
+
+The watcher polls Gmail every 30 s. When it finds an unread email with a PDF/DOCX/TXT attachment that contains **≥ 3 construction-contract keywords** (variation, payment, retention, force majeure, FIDIC, NEC4, JCT…), it runs the full ZimKAG analysis and emails you a summary with the branded PDF report attached.
+
+See [`zimkag_email_watcher/README.md`](zimkag_email_watcher/README.md) for the full setup walkthrough and tunable knobs (keyword threshold, polling cadence, dry-run mode, reply-to-sender toggle).
 
 ---
 
