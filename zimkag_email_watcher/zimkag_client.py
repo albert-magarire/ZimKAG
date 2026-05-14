@@ -103,3 +103,36 @@ class ZimKAGClient:
         job = self.wait_for_job(job_id)
         pdf = self.download_report(job_id)
         return job, pdf
+
+    # ── Recent dashboard logging ─────────────────────────────────────────
+    def log_processed_email(
+        self,
+        *,
+        email: dict[str, Any],
+        attachment: dict[str, Any],
+        results: list[dict[str, Any]],
+        pdf_bytes: bytes,
+    ) -> Optional[str]:
+        """Persist one processed email to the webapp's /recent dashboard.
+
+        Returns the new row id on success, or None if logging failed (the
+        watcher should not abort the whole pipeline on this).
+        """
+        import json
+        try:
+            metadata = json.dumps({
+                "email": email,
+                "attachment": attachment,
+                "results": results,
+            })
+            r = self.session.post(
+                f"{self.base_url}/api/recent",
+                data={"metadata": metadata},
+                files={"report": ("report.pdf", pdf_bytes, "application/pdf")},
+                timeout=30,
+            )
+            r.raise_for_status()
+            return r.json().get("id")
+        except Exception as e:
+            log.warning("Failed to log processed email to /recent: %s", e)
+            return None

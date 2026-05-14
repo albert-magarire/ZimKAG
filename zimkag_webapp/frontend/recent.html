@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ZimKAG · Recent Analyses</title>
+  <meta name="description" content="Dashboard of construction contracts auto-analysed from your inbox by the ZimKAG email watcher." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231a5f7a'/%3E%3Ctext x='32' y='44' font-size='34' font-family='system-ui' font-weight='800' text-anchor='middle' fill='%23ffc107'%3EZ%3C/text%3E%3C/svg%3E" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            zk: { navy: '#1a5f7a', gold: '#ffc107', cream: '#f9f3e6', ink: '#0f172a' },
+            risk: { high: '#dc2626', med: '#ea580c', low: '#ca8a04', opp: '#16a34a', neu: '#6b7280' }
+          },
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            display: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
+          },
+          boxShadow: { soft: '0 10px 30px -12px rgba(0,0,0,.15)' },
+          keyframes: {
+            'fade-up': { '0%': { opacity: 0, transform: 'translateY(10px)' }, '100%': { opacity: 1, transform: 'translateY(0)' } },
+          },
+          animation: { 'fade-up': 'fade-up .35s ease-out' }
+        }
+      }
+    }
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+
+<body class="font-sans bg-zk-cream text-zk-ink antialiased dark:bg-slate-900 dark:text-slate-100 transition-colors">
+
+  <!-- ─── Nav ────────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-white/70 dark:bg-slate-900/70 border-b border-slate-200/60 dark:border-slate-700/60">
+    <div class="max-w-7xl mx-auto flex items-center justify-between px-5 py-3">
+      <a href="/" class="flex items-center gap-3 group">
+        <span class="w-9 h-9 grid place-items-center rounded-xl bg-zk-navy text-zk-gold font-display font-extrabold text-lg shadow-soft group-hover:rotate-3 transition-transform">Z</span>
+        <div class="leading-tight">
+          <p class="font-display font-extrabold text-zk-navy dark:text-zk-gold text-lg">ZimKAG</p>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 -mt-0.5">Contract Risk &amp; Opportunity Analyser</p>
+        </div>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium">
+        <a href="/" class="hover:text-zk-navy dark:hover:text-zk-gold">Analyse</a>
+        <a href="/recent" class="text-zk-navy dark:text-zk-gold font-semibold">Recent</a>
+        <a href="/docs" target="_blank" class="hover:text-zk-navy dark:hover:text-zk-gold">API</a>
+        <span id="status-pill" class="text-[11px] px-2.5 py-1 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300">checking…</span>
+      </nav>
+      <button id="dark-toggle" class="ml-3 p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" title="Toggle dark mode">
+        <svg class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.36-6.36l-1.42 1.42M6.05 17.95l-1.41 1.41m0-13.72l1.41 1.41M17.95 17.95l1.41 1.41M12 7a5 5 0 100 10 5 5 0 000-10z"/></svg>
+        <svg class="w-5 h-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Hero / page header ───────────────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-5 pt-10 pb-4">
+    <span class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zk-navy dark:text-zk-gold bg-white/70 dark:bg-slate-800/70 px-3 py-1.5 rounded-full ring-1 ring-zk-navy/10 dark:ring-zk-gold/10">
+      <span class="w-1.5 h-1.5 rounded-full bg-zk-gold animate-pulse"></span> Email watcher · live feed
+    </span>
+    <h1 class="font-display font-extrabold text-3xl md:text-4xl mt-4">Recent inbox analyses</h1>
+    <p class="text-slate-600 dark:text-slate-300 mt-2 text-base">Every contract the watcher has scanned out of your Gmail, with the risk breakdown and a one-click PDF download.</p>
+  </section>
+
+  <!-- ─── Stats cards ──────────────────────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-5 mb-8">
+    <div class="grid grid-cols-2 lg:grid-cols-6 gap-3">
+      <div class="stat-card">
+        <p class="stat-label">Contracts analysed</p>
+        <p class="stat-value text-zk-navy dark:text-zk-gold" id="stat-total">—</p>
+        <p class="stat-foot"><span id="stat-today">0</span> today · <span id="stat-week">0</span> this week</p>
+      </div>
+      <div class="stat-card">
+        <p class="stat-label">Total clauses</p>
+        <p class="stat-value text-zk-navy dark:text-zk-gold" id="stat-clauses">—</p>
+        <p class="stat-foot">analysed end-to-end</p>
+      </div>
+      <div class="stat-card ring-risk-high/30">
+        <p class="stat-label text-risk-high">High-risk findings</p>
+        <p class="stat-value text-risk-high" id="stat-high">—</p>
+        <p class="stat-foot">red flags detected</p>
+      </div>
+      <div class="stat-card ring-risk-med/30">
+        <p class="stat-label text-risk-med">Medium</p>
+        <p class="stat-value text-risk-med" id="stat-medium">—</p>
+        <p class="stat-foot">worth tightening</p>
+      </div>
+      <div class="stat-card ring-risk-opp/30">
+        <p class="stat-label text-risk-opp">Opportunities</p>
+        <p class="stat-value text-risk-opp" id="stat-opp">—</p>
+        <p class="stat-foot">contractor-favourable</p>
+      </div>
+      <div class="stat-card ring-risk-neu/30">
+        <p class="stat-label text-risk-neu">Neutral</p>
+        <p class="stat-value text-risk-neu" id="stat-neutral">—</p>
+        <p class="stat-foot">boilerplate / headings</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── Filters ──────────────────────────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-5 mb-4">
+    <div class="bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft p-4 ring-1 ring-slate-200/60 dark:ring-slate-700/60 flex flex-wrap gap-3 items-center">
+      <div class="flex-1 min-w-[220px] relative">
+        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+        <input id="search-input" type="text" placeholder="Search by sender, subject or filename…"
+          class="w-full pl-9 pr-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 focus:outline-none focus:ring-2 focus:ring-zk-navy text-sm" />
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <button class="filter-pill filter-active" data-risk="">All</button>
+        <button class="filter-pill" data-risk="high">🚨 With high-risk</button>
+        <button class="filter-pill" data-risk="medium">🟠 With medium</button>
+        <button class="filter-pill" data-risk="opportunity">✅ With opportunities</button>
+      </div>
+      <button id="refresh-btn" class="ml-auto px-3 py-2 rounded-lg bg-zk-navy text-white text-sm font-semibold hover:opacity-90 transition flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M4 10a8 8 0 0114-5l2 2M20 14a8 8 0 01-14 5l-2-2"/></svg>
+        Refresh
+      </button>
+    </div>
+  </section>
+
+  <!-- ─── Results table ────────────────────────────────────────────── -->
+  <section class="max-w-7xl mx-auto px-5 pb-16">
+    <div class="bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft ring-1 ring-slate-200/60 dark:ring-slate-700/60 overflow-hidden">
+
+      <!-- Empty / loading state -->
+      <div id="empty-state" class="text-center py-16 px-5">
+        <div class="text-5xl">📭</div>
+        <h3 class="font-display font-bold text-xl mt-3">No analyses yet</h3>
+        <p class="text-slate-500 dark:text-slate-400 mt-2 max-w-md mx-auto">As soon as the Gmail watcher picks up a contract and analyses it, the entry will appear here.</p>
+        <a href="/" class="inline-block mt-4 px-4 py-2 rounded-lg bg-zk-navy text-white text-sm font-semibold hover:opacity-90">← Back to analyser</a>
+      </div>
+
+      <div id="results-wrap" class="hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-900/60 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <tr>
+                <th class="text-left px-4 py-3 font-semibold">When</th>
+                <th class="text-left px-4 py-3 font-semibold">From</th>
+                <th class="text-left px-4 py-3 font-semibold">Subject / file</th>
+                <th class="text-right px-4 py-3 font-semibold">Clauses</th>
+                <th class="text-center px-4 py-3 font-semibold">Risk profile</th>
+                <th class="text-right px-4 py-3 font-semibold">&nbsp;</th>
+              </tr>
+            </thead>
+            <tbody id="rows" class="divide-y divide-slate-100 dark:divide-slate-700/60"></tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 dark:border-slate-700/60 text-sm">
+          <p class="text-slate-500 dark:text-slate-400">
+            Showing <span id="page-from">0</span>–<span id="page-to">0</span> of <span id="page-total">0</span>
+          </p>
+          <div class="flex gap-2">
+            <button id="prev-btn" class="page-btn">← Prev</button>
+            <button id="next-btn" class="page-btn">Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="border-t border-slate-200/60 dark:border-slate-700/60 py-6">
+    <p class="text-center text-xs text-slate-500 dark:text-slate-400">
+      © 2026 ZimKAG · MSc Quantity Surveying · University of Zimbabwe
+    </p>
+  </footer>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 hidden z-50 px-4 py-3 rounded-xl bg-slate-900 text-white shadow-lg"></div>
+
+  <script src="/static/recent.js"></script>
+</body>
+</html>

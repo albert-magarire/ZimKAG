@@ -17,6 +17,7 @@ from .config import settings
 from .extraction import extract_text, split_clauses
 from .inference import get_engine
 from .reports import build_report
+from . import storage
 
 logging.basicConfig(
     level=logging.INFO,
@@ -33,6 +34,7 @@ JOBS: Dict[str, Dict[str, Any]] = {}
 async def lifespan(app: FastAPI):
     log.info("Starting ZimKAG…")
     log.info("Model dir: %s", settings.MODEL_DIR)
+    storage.init_db()
     try:
         get_engine()
         log.info("Engine ready.")
@@ -204,6 +206,81 @@ async def job_report(job_id: str):
     )
 
 
+# ── Recent dashboard (watcher-processed emails) ──────────────────────────────
+
+@app.post("/api/recent")
+async def log_processed(
+    metadata: str = Form(...),
+    report: UploadFile = File(...),
+) -> Dict[str, Any]:
+    """Called by the email-watcher after a successful analysis.
+
+    `metadata` is a JSON string with shape:
+        { "email": {...}, "attachment": {...}, "results": [...] }
+    `report` is the PDF file produced by the webapp for that analysis.
+    """
+    import json as _json
+    try:
+        meta = _json.loads(metadata)
+    except _json.JSONDecodeError as e:
+        raise HTTPException(400, f"metadata is not valid JSON: {e}")
+
+    if "email" not in meta or "attachment" not in meta or "results" not in meta:
+        raise HTTPException(400, "metadata must contain email, attachment, results")
+    if not isinstance(meta["results"], list):
+        raise HTTPException(400, "metadata.results must be a list")
+
+    pdf_bytes = await report.read()
+    if len(pdf_bytes) == 0:
+        raise HTTPException(400, "report file is empty")
+
+    rid = storage.insert_processed(
+        email=meta["email"] or {},
+        attachment=meta["attachment"] or {},
+        results=meta["results"] or [],
+        pdf_bytes=pdf_bytes,
+    )
+    return {"id": rid, "ok": True}
+
+
+@app.get("/api/recent")
+async def list_recent(
+    limit: int = 20,
+    offset: int = 0,
+    q: Optional[str] = None,
+    risk: Optional[str] = None,
+) -> Dict[str, Any]:
+    limit = max(1, min(100, int(limit)))
+    offset = max(0, int(offset))
+    rows, total = storage.list_recent(limit=limit, offset=offset, q=q, risk=risk)
+    return {
+        "items": rows,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "stats": storage.summary_stats(),
+    }
+
+
+@app.get("/api/recent/{rid}")
+async def get_recent_detail(rid: str) -> Dict[str, Any]:
+    row = storage.get_recent(rid)
+    if not row:
+        raise HTTPException(404, "Not found")
+    return row
+
+
+@app.get("/api/recent/{rid}/report")
+async def get_recent_report(rid: str):
+    p = storage.report_path(rid)
+    if not p:
+        raise HTTPException(404, "Report file missing")
+    row = storage.get_recent(rid)
+    stem = (row["filename"] if row else "contract").rsplit(".", 1)[0] or "contract"
+    return FileResponse(str(p), media_type="application/pdf",
+                        filename=f"ZimKAG_{stem}.pdf")
+
+
 # ── Static frontend ──────────────────────────────────────────────────────────
 
 if settings.FRONTEND_DIR.exists():
@@ -219,6 +296,13 @@ if settings.FRONTEND_DIR.exists():
         if not idx.exists():
             return HTMLResponse("<h1>frontend/index.html missing</h1>", status_code=500)
         return HTMLResponse(idx.read_text(encoding="utf-8"))
+
+    @app.get("/recent", response_class=HTMLResponse)
+    async def recent_page():
+        page = settings.FRONTEND_DIR / "recent.html"
+        if not page.exists():
+            return HTMLResponse("<h1>frontend/recent.html missing</h1>", status_code=500)
+        return HTMLResponse(page.read_text(encoding="utf-8"))
 
 
 @app.exception_handler(Exception)

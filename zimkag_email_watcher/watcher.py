@@ -19,6 +19,7 @@ import re
 import signal
 import sys
 import time
+from datetime import datetime, timezone
 from email.utils import parseaddr
 from typing import Optional
 
@@ -159,6 +160,29 @@ def _process_message(
             except Exception as e:
                 log.exception("   ↳ Failed to send report email: %s", e)
                 continue
+
+        # Persist to the /recent dashboard (best effort — failure here
+        # doesn't roll back the email reply that was just sent).
+        rid = zk.log_processed_email(
+            email={
+                "sender_address": sender_addr,
+                "sender_name": sender_name,
+                "subject": subject,
+                "message_id": message_id_h,
+                "thread_id": thread_id,
+                "received_at": datetime.now(timezone.utc).isoformat(),
+            },
+            attachment={
+                "filename": fname,
+                "size_bytes": int(att["size"]),
+                "keyword_hits": hits,
+                "matched_keywords": labels,
+            },
+            results=job.get("results", []) or [],
+            pdf_bytes=pdf_bytes,
+        )
+        if rid:
+            log.info("   📊 Logged to /recent dashboard (id=%s)", rid)
 
         analysed_any = True
 
