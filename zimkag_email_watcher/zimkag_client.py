@@ -59,14 +59,41 @@ class ZimKAGClient:
         poll_sec: float = 2.0,
         timeout_sec: Optional[int] = None,
     ) -> dict[str, Any]:
-        """Block until job finishes or timeout. Returns final job dict."""
+        """Block until job finishes or timeout. Returns final job dict.
+
+        Resilient to transient connection drops (Windows tends to RST idle
+        keep-alive sockets after ~50 reuses) — we retry a few times before
+        giving up.
+        """
         timeout_sec = timeout_sec or settings.ZIMKAG_TIMEOUT
         start = time.time()
         last_progress = -1
+        consecutive_errors = 0
+        MAX_CONSECUTIVE_ERRORS = 5
+
         while True:
-            r = self.session.get(f"{self.base_url}/api/jobs/{job_id}", timeout=20)
-            r.raise_for_status()
-            job = r.json()
+            try:
+                r = self.session.get(f"{self.base_url}/api/jobs/{job_id}", timeout=20)
+                r.raise_for_status()
+                job = r.json()
+                consecutive_errors = 0  # success — clear the streak
+            except Exception as e:
+                consecutive_errors += 1
+                log.warning(
+                    "Transient error polling job %s (try %d/%d): %s",
+                    job_id, consecutive_errors, MAX_CONSECUTIVE_ERRORS, e,
+                )
+                if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                    raise
+                # Rebuild the session so we don't reuse a dead pooled socket
+                try:
+                    self.session.close()
+                except Exception:
+                    pass
+                self.session = requests.Session()
+                time.sleep(min(2 ** consecutive_errors, 8))  # backoff: 2,4,8,8,8s
+                continue
+
             if job.get("progress", -1) != last_progress:
                 last_progress = job["progress"]
                 log.info(
@@ -135,4 +162,11 @@ class ZimKAGClient:
             return r.json().get("id")
         except Exception as e:
             log.warning("Failed to log processed email to /recent: %s", e)
+            # Reset session so the next request doesn't reuse a broken pooled
+            # connection (Windows sometimes closes the socket after a 5xx).
+            try:
+                self.session.close()
+            except Exception:
+                pass
+            self.session = requests.Session()
             return None

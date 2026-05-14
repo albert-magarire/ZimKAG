@@ -76,9 +76,14 @@ def _process_message(
     thread_id = msg.get("threadId")
     message_id_h = header(msg, "Message-ID") or None
 
-    # Don't process emails the watcher itself sent (avoid feedback loops)
-    if sender_addr.lower() == my_address.lower():
-        log.debug("Skipping self-sent message id=%s", msg_id)
+    # Don't process emails the watcher itself sent (avoid feedback loops).
+    # Detection is "from me" + watcher-style subject — pure address match is
+    # too aggressive (it blocks legitimate test emails you send to yourself).
+    if (
+        sender_addr.lower() == my_address.lower()
+        and (subject or "").lstrip().lower().startswith("[zimkag]")
+    ):
+        log.debug("Skipping self-sent ZimKAG reply id=%s", msg_id)
         gmail.add_label(msg_id, skipped_label_id)
         return
 
@@ -91,6 +96,7 @@ def _process_message(
     log.info("📩 [%s] %r — %d attachment(s)", sender_addr or "unknown", subject[:60], len(attachments))
 
     analysed_any = False
+    transient_failure = False
     for att in attachments:
         fname = att["filename"]
         if not is_supported(fname):
@@ -126,6 +132,7 @@ def _process_message(
             )
         except Exception as e:
             log.error("   ↳ ZimKAG analysis failed for %s: %s", fname, e)
+            transient_failure = True
             continue
 
         # ── Compose reply ────────────────────────────────────────────────
@@ -186,11 +193,22 @@ def _process_message(
 
         analysed_any = True
 
-    label_to_apply = processed_label_id if analysed_any else skipped_label_id
-    try:
-        gmail.add_label(msg_id, label_to_apply)
-    except Exception as e:
-        log.warning("Could not label message %s: %s", msg_id, e)
+    # Only label a message Processed/Skipped if the outcome is final.
+    # A transient analysis failure must remain un-labelled so the next
+    # polling cycle (or a manual retry) can pick it up again.
+    if analysed_any:
+        try:
+            gmail.add_label(msg_id, processed_label_id)
+        except Exception as e:
+            log.warning("Could not label %s as Processed: %s", msg_id, e)
+    elif transient_failure:
+        log.info("   ↳ leaving message %s un-labelled for retry", msg_id)
+    else:
+        # No attachment matched (wrong type, too small, too few keywords)
+        try:
+            gmail.add_label(msg_id, skipped_label_id)
+        except Exception as e:
+            log.warning("Could not label %s as Skipped: %s", msg_id, e)
 
 
 def run() -> None:

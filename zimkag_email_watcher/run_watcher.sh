@@ -37,4 +37,5 @@ echo " Press Ctrl+C to stop."
 echo "──────────────────────────────────────────────────────"
 echo
 
-python -m zimkag_email_watcher.watcher
+# Run from the parent directory so the 'zimkag_email_watcher' package resolves.
+( cd .. && ./zimkag_email_watcher/.venv/bin/python -m zimkag_email_watcher.watcher )

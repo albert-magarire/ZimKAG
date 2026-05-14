@@ -60,9 +60,13 @@ CREATE INDEX IF NOT EXISTS idx_recent_sender  ON recent_emails (sender_address);
 """
 
 
+_SCHEMA_READY = False
+
+
 @contextmanager
 def connect() -> Iterator[sqlite3.Connection]:
-    """Yield a connection with row factory + foreign keys configured."""
+    """Yield a connection with row factory + WAL, schema ensured."""
+    _ensure_schema()
     conn = sqlite3.connect(str(DB_PATH), isolation_level=None, timeout=15.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL;")
@@ -72,10 +76,25 @@ def connect() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
+def _ensure_schema() -> None:
+    """Idempotent schema creation. Cheap CREATE IF NOT EXISTS calls — safe to
+    run on every connection. Also recovers if the DB file was deleted while
+    the app was running."""
+    global _SCHEMA_READY
+    if _SCHEMA_READY and DB_PATH.exists():
+        return
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(DB_PATH), isolation_level=None, timeout=15.0)
+    try:
+        conn.executescript(SCHEMA)
+    finally:
+        conn.close()
+    _SCHEMA_READY = True
+
+
 def init_db() -> None:
     """Run on app startup."""
-    with connect() as db:
-        db.executescript(SCHEMA)
+    _ensure_schema()
     log.info("recent_emails DB ready at %s", DB_PATH)
 
 

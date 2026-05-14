@@ -48,7 +48,19 @@ class GmailClient:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     str(settings.CLIENT_SECRET_FILE), settings.SCOPES
                 )
-                creds = flow.run_local_server(port=0, prompt="consent")
+                # Print the URL explicitly in case the browser doesn't auto-open.
+                # We have to do this before run_local_server() blocks.
+                auth_url, _ = flow.authorization_url(prompt="consent")
+                log.info(
+                    "────────────────────────────────────────────────────────────\n"
+                    "  If a browser tab doesn't open, paste this URL into one:\n"
+                    "  %s\n"
+                    "────────────────────────────────────────────────────────────",
+                    auth_url,
+                )
+                creds = flow.run_local_server(port=0, prompt="consent",
+                                              open_browser=True,
+                                              authorization_prompt_message="")
             settings.TOKEN_FILE.write_text(creds.to_json(), encoding="utf-8")
             log.info("Saved token to %s", settings.TOKEN_FILE)
 

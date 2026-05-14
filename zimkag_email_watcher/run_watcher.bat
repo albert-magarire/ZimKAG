@@ -49,6 +49,9 @@ echo  Press Ctrl+C to stop.
 echo ──────────────────────────────────────────────────────
 echo.
 
-python -m zimkag_email_watcher.watcher
+REM Run from the parent directory so the 'zimkag_email_watcher' package resolves.
+pushd ..
+.\zimkag_email_watcher\.venv\Scripts\python.exe -m zimkag_email_watcher.watcher
+popd
 
 endlocal
